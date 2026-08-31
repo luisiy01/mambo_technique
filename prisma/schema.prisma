@@ -1,0 +1,35 @@
+// prisma/schema.prisma
+
+model Location {
+  id        String   @id @default(uuid())
+  name      String   // ej. "Estudio Central", "Sede Norte"
+  address   String?
+  schedules Schedule[]
+  createdAt DateTime @default(now())
+}
+
+model Student {
+  id        String   @id @default(uuid())
+  fullName  String
+  phone     String?
+  status    String   @default("ACTIVE") // ACTIVE, INACTIVE
+  payments  Payment[]
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  amount    Float
+  date      DateTime @default(now())
+  status    String   @default("PAID") // PAID, PENDING
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+}
+
+model Schedule {
+  id         String   @id @default(uuid())
+  dayOfWeek  String   // "Lunes", "Miércoles"
+  time       String   // "19:00 - 20:30"
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+}
