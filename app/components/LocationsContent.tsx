@@ -13,7 +13,9 @@ import {
   Sparkles, 
   Search,
   Building2,
-  Pencil
+  Pencil,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 export interface LocationItem {
@@ -77,8 +79,13 @@ const INITIAL_LOCATIONS: LocationItem[] = [
 export function LocationsContent() {
   const [locations, setLocations] = useState<LocationItem[]>(INITIAL_LOCATIONS);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estado para Modal de Registro / Edición
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Estado para Modal de Confirmación de Eliminación
+  const [locationToDelete, setLocationToDelete] = useState<LocationItem | null>(null);
 
   // Estado del Formulario
   const [formData, setFormData] = useState({
@@ -135,7 +142,6 @@ export function LocationsContent() {
       .filter(Boolean);
 
     if (editingId) {
-      // Actualizar sede existente
       setLocations(prev =>
         prev.map(loc =>
           loc.id === editingId
@@ -153,7 +159,6 @@ export function LocationsContent() {
         )
       );
     } else {
-      // Crear nueva sede
       const newLoc: LocationItem = {
         id: Date.now().toString(),
         name: formData.name,
@@ -169,6 +174,14 @@ export function LocationsContent() {
     }
 
     setIsModalOpen(false);
+  };
+
+  // Confirmar y eliminar sede
+  const handleConfirmDelete = () => {
+    if (locationToDelete) {
+      setLocations(prev => prev.filter(loc => loc.id !== locationToDelete.id));
+      setLocationToDelete(null);
+    }
   };
 
   const getRentBadgeColor = (type: LocationItem['rentType']) => {
@@ -225,14 +238,25 @@ export function LocationsContent() {
             className="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden"
           >
             <div className="p-6">
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="font-bold text-lg text-slate-900 leading-snug">{loc.name}</h3>
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getRentBadgeColor(loc.rentType)}`}>
-                  {loc.rentType === 'FIXED' && 'Renta Fija'}
-                  {loc.rentType === 'HOURLY' && 'Por Hora'}
-                  {loc.rentType === 'PERCENTAGE' && 'Comisión'}
-                  {loc.rentType === 'FREE' && 'Sin Costo'}
-                </span>
+              {/* Encabezado Tarjeta con Botón Eliminar */}
+              <div className="flex justify-between items-start mb-3 gap-2">
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900 leading-snug">{loc.name}</h3>
+                  <span className={`inline-block mt-1 text-xs font-semibold px-2.5 py-0.5 rounded-full ${getRentBadgeColor(loc.rentType)}`}>
+                    {loc.rentType === 'FIXED' && 'Renta Fija'}
+                    {loc.rentType === 'HOURLY' && 'Por Hora'}
+                    {loc.rentType === 'PERCENTAGE' && 'Comisión'}
+                    {loc.rentType === 'FREE' && 'Sin Costo'}
+                  </span>
+                </div>
+                
+                <button
+                  onClick={() => setLocationToDelete(loc)}
+                  title="Eliminar sede"
+                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
 
               <div className="space-y-2 text-xs text-slate-600 mb-4">
@@ -299,7 +323,7 @@ export function LocationsContent() {
               </div>
             </div>
 
-            {/* Acciones */}
+            {/* Acciones del pie de la tarjeta */}
             <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 flex items-center justify-between text-xs">
               {loc.googleMapsUrl ? (
                 <a 
@@ -430,6 +454,37 @@ export function LocationsContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Eliminación */}
+      {locationToDelete && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-sm w-full p-6 shadow-xl border border-slate-200 text-center">
+            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 mb-2">
+              ¿Eliminar "{locationToDelete.name}"?
+            </h3>
+            <p className="text-xs text-slate-500 mb-6">
+              Esta acción eliminará la sede de tu lista. ¿Estás seguro de continuar?
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setLocationToDelete(null)}
+                className="w-full py-2 border text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="w-full py-2 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition-colors"
+              >
+                Sí, eliminar
+              </button>
+            </div>
           </div>
         </div>
       )}
