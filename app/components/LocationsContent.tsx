@@ -12,7 +12,8 @@ import {
   ExternalLink, 
   Sparkles, 
   Search,
-  Building2
+  Building2,
+  Pencil
 } from 'lucide-react';
 
 export interface LocationItem {
@@ -22,7 +23,7 @@ export interface LocationItem {
   googleMapsUrl?: string;
   contactPhone?: string;
   rentType: 'FIXED' | 'HOURLY' | 'PERCENTAGE' | 'FREE';
-  rentCost: string; // ej. "$3,000 / mes", "$200 / hr", "30% por alumno"
+  rentCost: string;
   capacity: number;
   amenities: string[];
   schedules: { id: string; name: string; time: string }[];
@@ -77,8 +78,9 @@ export function LocationsContent() {
   const [locations, setLocations] = useState<LocationItem[]>(INITIAL_LOCATIONS);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Form State
+  // Estado del Formulario
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -94,22 +96,9 @@ export function LocationsContent() {
     loc.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCreateLocation = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newLoc: LocationItem = {
-      id: Date.now().toString(),
-      name: formData.name,
-      address: formData.address,
-      contactPhone: formData.contactPhone,
-      rentType: formData.rentType,
-      rentCost: formData.rentCost,
-      capacity: Number(formData.capacity),
-      amenities: formData.amenitiesInput.split(',').map(a => a.trim()).filter(Boolean),
-      schedules: []
-    };
-
-    setLocations([...locations, newLoc]);
-    setIsModalOpen(false);
+  // Abrir Modal para Crear Nueva Sede
+  const handleOpenCreateModal = () => {
+    setEditingId(null);
     setFormData({
       name: '',
       address: '',
@@ -119,6 +108,67 @@ export function LocationsContent() {
       capacity: 20,
       amenitiesInput: '',
     });
+    setIsModalOpen(true);
+  };
+
+  // Abrir Modal para Editar Sede Existente
+  const handleOpenEditModal = (loc: LocationItem) => {
+    setEditingId(loc.id);
+    setFormData({
+      name: loc.name,
+      address: loc.address,
+      contactPhone: loc.contactPhone || '',
+      rentType: loc.rentType,
+      rentCost: loc.rentCost,
+      capacity: loc.capacity,
+      amenitiesInput: loc.amenities.join(', '),
+    });
+    setIsModalOpen(true);
+  };
+
+  // Guardar (Crear o Actualizar)
+  const handleSaveLocation = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amenitiesArray = formData.amenitiesInput
+      .split(',')
+      .map(a => a.trim())
+      .filter(Boolean);
+
+    if (editingId) {
+      // Actualizar sede existente
+      setLocations(prev =>
+        prev.map(loc =>
+          loc.id === editingId
+            ? {
+                ...loc,
+                name: formData.name,
+                address: formData.address,
+                contactPhone: formData.contactPhone,
+                rentType: formData.rentType,
+                rentCost: formData.rentCost,
+                capacity: Number(formData.capacity),
+                amenities: amenitiesArray,
+              }
+            : loc
+        )
+      );
+    } else {
+      // Crear nueva sede
+      const newLoc: LocationItem = {
+        id: Date.now().toString(),
+        name: formData.name,
+        address: formData.address,
+        contactPhone: formData.contactPhone,
+        rentType: formData.rentType,
+        rentCost: formData.rentCost,
+        capacity: Number(formData.capacity),
+        amenities: amenitiesArray,
+        schedules: []
+      };
+      setLocations(prev => [...prev, newLoc]);
+    }
+
+    setIsModalOpen(false);
   };
 
   const getRentBadgeColor = (type: LocationItem['rentType']) => {
@@ -132,7 +182,7 @@ export function LocationsContent() {
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
-      {/* Encabezado de la Sección */}
+      {/* Encabezado */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -145,7 +195,7 @@ export function LocationsContent() {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenCreateModal}
           className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors text-sm"
         >
           <Plus className="h-4 w-4" />
@@ -153,7 +203,7 @@ export function LocationsContent() {
         </button>
       </div>
 
-      {/* Barra de Búsqueda y Filtros */}
+      {/* Buscador */}
       <div className="mb-6">
         <div className="relative max-w-md">
           <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
@@ -167,7 +217,7 @@ export function LocationsContent() {
         </div>
       </div>
 
-      {/* Grid de Sedes */}
+      {/* Lista de Sedes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredLocations.map((loc) => (
           <div 
@@ -175,7 +225,6 @@ export function LocationsContent() {
             className="bg-white rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow flex flex-col justify-between overflow-hidden"
           >
             <div className="p-6">
-              {/* Encabezado Tarjeta */}
               <div className="flex justify-between items-start mb-3">
                 <h3 className="font-bold text-lg text-slate-900 leading-snug">{loc.name}</h3>
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getRentBadgeColor(loc.rentType)}`}>
@@ -186,7 +235,6 @@ export function LocationsContent() {
                 </span>
               </div>
 
-              {/* Punto 1: Info Básica */}
               <div className="space-y-2 text-xs text-slate-600 mb-4">
                 <div className="flex items-start gap-2">
                   <MapPin className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
@@ -200,7 +248,6 @@ export function LocationsContent() {
                 )}
               </div>
 
-              {/* Punto 2 y 3: Costos y Capacidad */}
               <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg mb-4 border border-slate-100">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4 text-indigo-500" />
@@ -218,7 +265,6 @@ export function LocationsContent() {
                 </div>
               </div>
 
-              {/* Punto 3: Amenidades / Equipamiento */}
               {loc.amenities.length > 0 && (
                 <div className="mb-4">
                   <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
@@ -234,7 +280,6 @@ export function LocationsContent() {
                 </div>
               )}
 
-              {/* Punto 4: Clases / Horarios Asignados */}
               <div>
                 <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
                   <Clock className="h-3 w-3 text-blue-500" /> Clases en esta Sede
@@ -254,7 +299,7 @@ export function LocationsContent() {
               </div>
             </div>
 
-            {/* Acciones del Card */}
+            {/* Acciones */}
             <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 flex items-center justify-between text-xs">
               {loc.googleMapsUrl ? (
                 <a 
@@ -266,7 +311,11 @@ export function LocationsContent() {
                   Ver en Maps <ExternalLink className="h-3 w-3" />
                 </a>
               ) : <span />}
-              <button className="text-slate-500 font-medium hover:text-slate-800">
+              <button 
+                onClick={() => handleOpenEditModal(loc)}
+                className="inline-flex items-center gap-1 text-slate-600 font-medium hover:text-indigo-600 transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" />
                 Editar Sede
               </button>
             </div>
@@ -274,12 +323,14 @@ export function LocationsContent() {
         ))}
       </div>
 
-      {/* Modal / Formulario para Nueva Sede */}
+      {/* Modal Reutilizable (Crear / Editar) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-4">Registrar Nueva Sede</h3>
-            <form onSubmit={handleCreateLocation} className="space-y-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
+              {editingId ? `Editar Sede: ${formData.name}` : 'Registrar Nueva Sede'}
+            </h3>
+            <form onSubmit={handleSaveLocation} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Nombre del Lugar</label>
                 <input
@@ -373,9 +424,9 @@ export function LocationsContent() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
                 >
-                  Guardar Sede
+                  {editingId ? 'Guardar Cambios' : 'Guardar Sede'}
                 </button>
               </div>
             </form>
