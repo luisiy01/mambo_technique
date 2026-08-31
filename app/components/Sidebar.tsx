@@ -12,11 +12,12 @@ interface SidebarProps {
   currentRoute?: string;
 }
 
-export function Sidebar({ currentRoute = '/dashboard/locations' }: SidebarProps) {
+export function Sidebar({ currentRoute = '/dashboard' }: SidebarProps) {
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: TrendingUp },
     { label: 'Lugares de Clases', href: '/dashboard/locations', icon: MapPin },
     { label: 'Alumnos', href: '/dashboard/students', icon: Users },
+    { label: 'Horarios', href: '/dashboard/schedules', icon: Calendar },
     { label: 'Pagos', href: '/dashboard/payments', icon: CreditCard },
   ];
 
