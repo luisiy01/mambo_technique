@@ -1,35 +1,139 @@
 // prisma/schema.prisma
 
+datasource db {
+  provider  = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --------------------------------------
+// 1. LUGARES / SEDES
+// --------------------------------------
+enum RentType {
+  FIXED
+  HOURLY
+  PERCENTAGE
+  FREE
+}
+
 model Location {
-  id        String   @id @default(uuid())
-  name      String   // ej. "Estudio Central", "Sede Norte"
-  address   String?
-  schedules Schedule[]
-  createdAt DateTime @default(now())
+  id           String     @id @default(uuid())
+  name         String
+  address      String
+  googleMapsUrl String?
+  contactPhone String?
+  rentType     RentType   @default(FIXED)
+  rentCost     String     // ej. "$3,500 MXN / mes"
+  capacity     Int        @default(20)
+  amenities    String[]   // Array de amenidades: ["Duela", "Espejos"]
+  
+  // Relaciones
+  schedules    Schedule[]
+  students     Student[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+// --------------------------------------
+// 2. HORARIOS Y CLASES
+// --------------------------------------
+model Schedule {
+  id          String   @id @default(uuid())
+  className   String   // ej. "Mambo On2 Intermedios"
+  days        String[] // ["Lunes", "Miércoles"]
+  startTime   String   // "19:00"
+  endTime     String   // "20:30"
+  level       String   @default("Intermedio") // Principiante, Intermedio, Avanzado
+  maxCapacity Int      @default(20)
+  instructor  String   @default("Luis Fernando")
+  
+  // Relación con Sede
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  // Relación con Alumnos
+  students    Student[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// --------------------------------------
+// 3. ALUMNOS
+// --------------------------------------
+enum DanceRole {
+  LEADER
+  FOLLOWER
+  BOTH
+}
+
+enum StudentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  DUE_SOON
 }
 
 model Student {
-  id        String   @id @default(uuid())
-  fullName  String
-  phone     String?
-  status    String   @default("ACTIVE") // ACTIVE, INACTIVE
-  payments  Payment[]
-  createdAt DateTime @default(now())
+  id             String        @id @default(uuid())
+  fullName       String
+  phone          String
+  email          String?
+  danceRole      DanceRole     @default(FOLLOWER)
+  level          String        @default("Principiante")
+  paymentStatus  PaymentStatus @default(PAID)
+  paymentDueDate Int           @default(5) // Día del mes límite de pago
+  status         StudentStatus @default(ACTIVE)
+
+  // Relación opcional con Sede principal
+  locationId     String?
+  location       Location?     @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  // Relación opcional con Clase/Horario asignado
+  scheduleId     String?
+  schedule       Schedule?     @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  // Relación con Pagos
+  payments       Payment[]
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+// --------------------------------------
+// 4. PAGOS Y FINANZAS
+// --------------------------------------
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  CARD
+}
+
+enum TransactionStatus {
+  COMPLETED
+  PENDING
+  CANCELLED
 }
 
 model Payment {
-  id        String   @id @default(uuid())
-  amount    Float
-  date      DateTime @default(now())
-  status    String   @default("PAID") // PAID, PENDING
-  studentId String
-  student   Student  @relation(fields: [studentId], references: [id])
-}
+  id            String            @id @default(uuid())
+  concept       String            // ej. "Colegiatura Septiembre - Mambo"
+  amount        Float
+  date          DateTime          @default(now())
+  paymentMethod PaymentMethod     @default(TRANSFER)
+  status        TransactionStatus @default(COMPLETED)
 
-model Schedule {
-  id         String   @id @default(uuid())
-  dayOfWeek  String   // "Lunes", "Miércoles"
-  time       String   // "19:00 - 20:30"
-  locationId String
-  location   Location @relation(fields: [locationId], references: [id])
+  // Relación con Alumno
+  studentId     String
+  student       Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 }
