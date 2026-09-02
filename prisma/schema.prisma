@@ -61,6 +61,8 @@ model Schedule {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  attendances Attendance[]
 }
 
 // --------------------------------------
@@ -107,6 +109,8 @@ model Student {
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+
+  attendances Attendance[]
 }
 
 // --------------------------------------
@@ -138,4 +142,35 @@ model Payment {
 
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
+}
+
+// 1. Agregar el Enum para el Estatus de Asistencia
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+// 2. Modelo de Asistencia
+model Attendance {
+  id          String           @id @default(uuid())
+  date        DateTime
+  status      AttendanceStatus @default(PRESENT)
+  notes       String?
+
+  // Relación con Alumno
+  studentId   String
+  student     Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Relación con Clase / Horario
+  scheduleId  String
+  schedule    Schedule         @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Garantiza que un alumno solo tenga un registro por clase y fecha
+  @@unique([studentId, scheduleId, date])
+  @@index([scheduleId, date])
 }

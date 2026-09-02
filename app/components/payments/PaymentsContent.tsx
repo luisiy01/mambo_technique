@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, CreditCard, Loader2 } from 'lucide-react';
+import { Plus, Search, CreditCard, Loader2, Calendar } from 'lucide-react';
 import { PaymentMetrics } from './PaymentMetrics';
 import { PaymentTable } from './PaymentTable';
 import { PaymentModal, StudentOption } from './PaymentModal';
@@ -20,23 +20,50 @@ export interface PaymentItem {
   status: 'COMPLETED' | 'PENDING' | 'CANCELLED';
 }
 
+const MONTHS = [
+  { value: 1, label: 'Enero' },
+  { value: 2, label: 'Febrero' },
+  { value: 3, label: 'Marzo' },
+  { value: 4, label: 'Abril' },
+  { value: 5, label: 'Mayo' },
+  { value: 6, label: 'Junio' },
+  { value: 7, label: 'Julio' },
+  { value: 8, label: 'Agosto' },
+  { value: 9, label: 'Septiembre' },
+  { value: 10, label: 'Octubre' },
+  { value: 11, label: 'Noviembre' },
+  { value: 12, label: 'Diciembre' },
+];
+
 export function PaymentsContent() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [students, setStudents] = useState<StudentOption[]>([]);
+  
+  // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  
+  // Estado para Mes y Año seleccionados (Inicializa con la fecha actual)
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getUTCMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getUTCFullYear());
+
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (month?: number, year?: number) => {
     setIsLoading(true);
     try {
+      const targetMonth = month !== undefined ? month : selectedMonth;
+      const targetYear = year !== undefined ? year : selectedYear;
+
       const [paymentsData, studentsData] = await Promise.all([
-        getPayments(),
+        getPayments(targetMonth, targetYear),
         getStudents(),
       ]);
+
       setPayments(paymentsData.payments);
       setMonthlyIncome(paymentsData.monthlyIncome);
       setStudents(studentsData.map((s) => ({ id: s.id, fullName: s.fullName })));
@@ -52,17 +79,34 @@ export function PaymentsContent() {
     loadData();
   }, []);
 
+  const handleMonthChange = (newMonth: number) => {
+    setSelectedMonth(newMonth);
+    loadData(newMonth, selectedYear);
+  };
+
+  const handleYearChange = (newYear: number) => {
+    setSelectedYear(newYear);
+    loadData(selectedMonth, newYear);
+  };
+
+  // Filtrado dinámico en la tabla según buscador, estatus y periodo seleccionado
   const filteredPayments = payments.filter((p) => {
     const matchesSearch =
       p.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.concept.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    // Filtrar en la tabla los pagos que coincidan con el mes y año elegidos
+    const paymentDate = new Date(p.date);
+    const matchesMonth = (paymentDate.getUTCMonth() + 1) === selectedMonth;
+    const matchesYear = paymentDate.getUTCFullYear() === selectedYear;
+
+    return matchesSearch && matchesStatus && matchesMonth && matchesYear;
   });
 
   const handleSavePayment = async (data: PaymentFormData) => {
     await createPayment(data);
-    await loadData();
+    await loadData(selectedMonth, selectedYear);
     setIsModalOpen(false);
   };
 
@@ -75,11 +119,14 @@ export function PaymentsContent() {
     );
   }
 
-  // Conteos complementarios
-  const completedPaymentsCount = payments.filter((p) => p.status === 'COMPLETED').length;
-  const pendingAmount = payments
+  const completedPaymentsCount = filteredPayments.filter((p) => p.status === 'COMPLETED').length;
+  const pendingAmount = filteredPayments
     .filter((p) => p.status === 'PENDING')
     .reduce((sum, p) => sum + p.amount, 0);
+
+  // Lista de últimos 3 años disponibles
+  const currentYearNum = new Date().getFullYear();
+  const availableYears = [currentYearNum - 1, currentYearNum, currentYearNum + 1];
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
@@ -104,7 +151,41 @@ export function PaymentsContent() {
         </button>
       </div>
 
-      {/* Métricas Financieras (monthlyIncome filtrado solo del mes actual) */}
+      {/* Selector de Mes y Año */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-slate-700 font-semibold text-sm">
+          <Calendar className="h-5 w-5 text-indigo-600" />
+          <span>Periodo Consultado:</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedMonth}
+            onChange={(e) => handleMonthChange(Number(e.target.value))}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {MONTHS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedYear}
+            onChange={(e) => handleYearChange(Number(e.target.value))}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            {availableYears.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Métricas Financieras del Mes y Año Seleccionados */}
       <PaymentMetrics
         totalMonthIncome={monthlyIncome}
         completedPaymentsCount={completedPaymentsCount}
@@ -138,7 +219,7 @@ export function PaymentsContent() {
         </div>
       </div>
 
-      {/* Cargando o Tabla de Historial */}
+      {/* Tabla del Historial Filtrada */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
           <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-2" />

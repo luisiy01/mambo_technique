@@ -14,17 +14,19 @@ export interface PaymentFormData {
   status: TransactionStatus;
 }
 
-// Obtener los pagos e ingresos calculados del mes en curso
-export async function getPayments() {
+// Obtener pagos e ingresos filtrados dinámicamente por mes y año
+export async function getPayments(selectedMonth?: number, selectedYear?: number) {
   try {
     const now = new Date();
+    const month = selectedMonth !== undefined ? selectedMonth : now.getUTCMonth() + 1; // 1-12
+    const year = selectedYear !== undefined ? selectedYear : now.getUTCFullYear();
 
-    // Rango UTC para el mes actual
-    const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0));
-    const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999));
+    // Rango UTC para el mes y año seleccionados
+    const startOfMonth = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+    const endOfMonth = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
     const [payments, monthlyCompletedPayments] = await Promise.all([
-      // 1. Obtener todo el historial de pagos para la tabla
+      // 1. Historial de pagos
       prisma.payment.findMany({
         include: {
           student: {
@@ -38,7 +40,7 @@ export async function getPayments() {
           createdAt: 'desc',
         },
       }),
-      // 2. Obtener únicamente los pagos COMPLETADOS dentro del mes actual
+      // 2. Pagos COMPLETADOS filtrados por el mes/año seleccionado
       prisma.payment.findMany({
         where: {
           status: 'COMPLETED',
@@ -53,7 +55,7 @@ export async function getPayments() {
       }),
     ]);
 
-    // Sumar ingresos solo del mes en curso
+    // Sumar ingresos del mes/año seleccionado
     const monthlyIncome = monthlyCompletedPayments.reduce((sum, p) => sum + p.amount, 0);
 
     return {
@@ -68,6 +70,8 @@ export async function getPayments() {
         status: p.status,
       })),
       monthlyIncome,
+      selectedMonth: month,
+      selectedYear: year,
     };
   } catch (error) {
     console.error('Error al obtener pagos:', error);
