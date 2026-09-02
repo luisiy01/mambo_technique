@@ -1,11 +1,18 @@
 // components/locations/LocationsContent.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Search, Building2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Building2, Loader2 } from 'lucide-react';
 import { LocationCard } from './LocationCard';
 import { LocationModal } from './LocationModal';
 import { DeleteLocationModal } from './DeleteLocationModal';
+import { 
+  getLocations, 
+  createLocation, 
+  updateLocation, 
+  deleteLocation,
+  LocationFormData 
+} from '@/app/actions/locations';
 
 export interface LocationItem {
   id: string;
@@ -20,59 +27,32 @@ export interface LocationItem {
   schedules: { id: string; name: string; time: string }[];
 }
 
-const INITIAL_LOCATIONS: LocationItem[] = [
-  {
-    id: '1',
-    name: 'Estudio Central Mambo',
-    address: 'Av. Revolución 450, Col. Centro',
-    googleMapsUrl: 'https://maps.google.com',
-    contactPhone: '+52 312 123 4567',
-    rentType: 'FIXED',
-    rentCost: '$3,500 MXN / mes',
-    capacity: 25,
-    amenities: ['Piso de Duela', 'Espejos', 'Aire Acondicionado', 'Audio Bluetooth'],
-    schedules: [
-      { id: 's1', name: 'Mambo On2 (Intermedios)', time: 'Lun y Mié - 19:00 a 20:30' },
-      { id: 's2', name: 'Pachanga & Estilo', time: 'Vie - 18:00 a 19:30' }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Academia Ritmo Norte',
-    address: 'Calle Hidalgo 120, Col. Jardines',
-    googleMapsUrl: 'https://maps.google.com',
-    contactPhone: '+52 312 987 6543',
-    rentType: 'HOURLY',
-    rentCost: '$250 MXN / hora',
-    capacity: 18,
-    amenities: ['Espejos', 'Equipo de Sonido'],
-    schedules: [
-      { id: 's3', name: 'Salsa Casino / Timba', time: 'Mar y Jue - 20:00 a 21:30' }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Salón Cultural',
-    address: 'Av. Tecnológico 85',
-    contactPhone: '+52 312 555 1122',
-    rentType: 'PERCENTAGE',
-    rentCost: '30% Comisión',
-    capacity: 30,
-    amenities: ['Piso Madera', 'Amplio Estacionamiento'],
-    schedules: [
-      { id: 's4', name: 'Cha Cha Cha & Musicalidad', time: 'Sáb - 11:00 a 13:00' }
-    ]
-  }
-];
-
 export function LocationsContent() {
-  const [locations, setLocations] = useState<LocationItem[]>(INITIAL_LOCATIONS);
+  const [locations, setLocations] = useState<LocationItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  
+  const [isLoading, setIsLoading] = useState(true);
+
   // Modales y Edición
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<LocationItem | null>(null);
   const [deletingLocation, setDeletingLocation] = useState<LocationItem | null>(null);
+
+  // Cargar sedes desde Supabase al montar el componente
+  const loadLocations = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getLocations();
+      setLocations(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadLocations();
+  }, []);
 
   const filteredLocations = locations.filter(loc => 
     loc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -89,25 +69,20 @@ export function LocationsContent() {
     setIsModalOpen(true);
   };
 
-  const handleSaveLocation = (data: Omit<LocationItem, 'id' | 'schedules'>) => {
+  const handleSaveLocation = async (data: LocationFormData) => {
     if (editingLocation) {
-      setLocations(prev =>
-        prev.map(loc => loc.id === editingLocation.id ? { ...loc, ...data } : loc)
-      );
+      await updateLocation(editingLocation.id, data);
     } else {
-      const newLoc: LocationItem = {
-        id: Date.now().toString(),
-        ...data,
-        schedules: []
-      };
-      setLocations(prev => [...prev, newLoc]);
+      await createLocation(data);
     }
+    await loadLocations();
     setIsModalOpen(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deletingLocation) {
-      setLocations(prev => prev.filter(loc => loc.id !== deletingLocation.id));
+      await deleteLocation(deletingLocation.id);
+      await loadLocations();
       setDeletingLocation(null);
     }
   };
@@ -149,19 +124,32 @@ export function LocationsContent() {
         </div>
       </div>
 
-      {/* Lista de Sedes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredLocations.map((loc) => (
-          <LocationCard
-            key={loc.id}
-            location={loc}
-            onEdit={handleOpenEditModal}
-            onDelete={(l) => setDeletingLocation(l)}
-          />
-        ))}
-      </div>
+      {/* Cargando o Lista de Sedes */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
+          <p className="text-sm">Cargando sedes desde Supabase...</p>
+        </div>
+      ) : filteredLocations.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredLocations.map((loc) => (
+            <LocationCard
+              key={loc.id}
+              location={loc}
+              onEdit={handleOpenEditModal}
+              onDelete={(l) => setDeletingLocation(l)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+          <Building2 className="h-10 w-10 text-slate-300 mx-auto mb-2" />
+          <h3 className="font-semibold text-slate-700">No hay sedes registradas</h3>
+          <p className="text-xs text-slate-400 mt-1">Haz clic en "Nueva Sede" para agregar tu primer lugar de clases.</p>
+        </div>
+      )}
 
-      {/* Modales desacoplados */}
+      {/* Modales */}
       <LocationModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

@@ -1,5 +1,5 @@
 // components/payments/PaymentModal.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, UserCheck } from 'lucide-react';
 import { PaymentItem } from './PaymentsContent';
 
@@ -37,9 +37,14 @@ export function PaymentModal({
 
   const [concept, setConcept] = useState('Colegiatura Mensual');
   const [amount, setAmount] = useState<number | ''>(800);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentItem['paymentMethod']>('TRANSFER');
   const [status, setStatus] = useState<PaymentItem['status']>('COMPLETED');
+
+useEffect(() => {
+  // Se asigna la fecha solo cuando el componente ya está en el cliente
+  setDate(new Date().toISOString().split('T')[0]);
+}, [isOpen]);
 
   // Filtrar alumnos según la búsqueda
   const filteredStudents = useMemo(() => {
@@ -70,6 +75,8 @@ export function PaymentModal({
     setAmount(800);
     onClose();
   };
+
+  
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
