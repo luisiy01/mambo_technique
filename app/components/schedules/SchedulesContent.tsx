@@ -111,7 +111,7 @@ export function SchedulesContent() {
   }
 
   const totalClasses = schedules.length;
-  const totalWeeklyHours = schedules.reduce((sum, item) => sum + (item.days.length * 1.5), 0);
+  const totalWeeklyHours = schedules.reduce((sum, item) => sum + item.days.length, 0);
   const totalStudentsEnrolled = schedules.reduce(
     (sum, item) => sum + item.enrolledLeaders + item.enrolledFollowers,
     0

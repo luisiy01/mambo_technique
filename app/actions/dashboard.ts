@@ -5,10 +5,11 @@ import { prisma } from '@/lib/prisma';
 
 export async function getDashboardData() {
   try {
-    // Definir inicio y fin del mes actual
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    
+    // Rango UTC para abarcar todo el mes actual sin pérdidas por zona horaria
+    const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0));
+    const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999));
 
     // Consultas en paralelo para optimizar el rendimiento
     const [
@@ -62,7 +63,7 @@ export async function getDashboardData() {
       }),
     ]);
 
-    // Calcular suma total de ingresos del mes
+    // Sumar todos los ingresos devueltos en la consulta
     const monthlyIncome = monthlyPayments.reduce((sum, p) => sum + p.amount, 0);
 
     return {

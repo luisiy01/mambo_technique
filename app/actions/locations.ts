@@ -18,7 +18,6 @@ export interface LocationFormData {
 // 1. Obtener todas las sedes con sus clases asignadas
 export async function getLocations() {
   try {
-    console.log('here1 ?')
     const locations = await prisma.location.findMany({
       include: {
         schedules: {

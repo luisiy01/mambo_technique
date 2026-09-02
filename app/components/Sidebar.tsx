@@ -28,7 +28,7 @@ export function Sidebar({ currentRoute = '/dashboard' }: SidebarProps) {
           <div className="bg-indigo-600 p-2 rounded-lg">
             <Calendar className="h-6 w-6 text-white" />
           </div>
-          <h1 className="font-bold text-lg tracking-wide">Dance Control</h1>
+          <h1 className="font-bold text-lg tracking-wide">Mambo Dance & Technique</h1>
         </div>
 
         <nav className="mt-6 flex flex-col gap-1">
