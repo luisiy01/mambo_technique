@@ -1,13 +1,19 @@
 // components/schedules/ScheduleModal.tsx
 import React, { useState, useEffect } from 'react';
 import { ClassScheduleItem } from './SchedulesContent';
+import { ScheduleFormData } from '../../actions/schedules';
+
+export interface LocationOption {
+  id: string;
+  name: string;
+}
 
 interface ScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Omit<ClassScheduleItem, 'id' | 'enrolledLeaders' | 'enrolledFollowers'>) => void;
+  onSave: (data: ScheduleFormData) => void;
   initialData?: ClassScheduleItem | null;
-  availableLocations: string[];
+  availableLocations: LocationOption[];
 }
 
 const DAYS_OF_WEEK = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -21,7 +27,7 @@ export function ScheduleModal({
 }: ScheduleModalProps) {
   const [formData, setFormData] = useState({
     className: '',
-    locationName: availableLocations[0] || 'Estudio Central Mambo',
+    locationId: availableLocations[0]?.id || '',
     days: ['Lunes', 'Miércoles'],
     startTime: '19:00',
     endTime: '20:30',
@@ -34,7 +40,7 @@ export function ScheduleModal({
     if (initialData) {
       setFormData({
         className: initialData.className,
-        locationName: initialData.locationName,
+        locationId: initialData.locationId,
         days: initialData.days,
         startTime: initialData.startTime,
         endTime: initialData.endTime,
@@ -45,7 +51,7 @@ export function ScheduleModal({
     } else {
       setFormData({
         className: '',
-        locationName: availableLocations[0] || 'Estudio Central Mambo',
+        locationId: availableLocations[0]?.id || '',
         days: ['Lunes', 'Miércoles'],
         startTime: '19:00',
         endTime: '20:30',
@@ -69,7 +75,7 @@ export function ScheduleModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.days.length === 0) return;
+    if (formData.days.length === 0 || !formData.locationId) return;
     onSave(formData);
   };
 
@@ -95,12 +101,14 @@ export function ScheduleModal({
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Sede / Lugar</label>
             <select
-              value={formData.locationName}
-              onChange={(e) => setFormData({ ...formData, locationName: e.target.value })}
+              required
+              value={formData.locationId}
+              onChange={(e) => setFormData({ ...formData, locationId: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 bg-white"
             >
-              {availableLocations.map((loc, idx) => (
-                <option key={idx} value={loc}>{loc}</option>
+              <option value="" disabled>Selecciona una sede...</option>
+              {availableLocations.map((loc) => (
+                <option key={loc.id} value={loc.id}>{loc.name}</option>
               ))}
             </select>
           </div>
@@ -198,7 +206,8 @@ export function ScheduleModal({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+              disabled={availableLocations.length === 0}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:bg-slate-300"
             >
               {initialData ? 'Guardar Cambios' : 'Guardar Clase'}
             </button>
