@@ -1,14 +1,17 @@
 // components/payments/PaymentsContent.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Search, CreditCard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, CreditCard, Loader2 } from 'lucide-react';
 import { PaymentMetrics } from './PaymentMetrics';
 import { PaymentTable } from './PaymentTable';
-import { PaymentModal } from './PaymentModal';
+import { PaymentModal, StudentOption } from './PaymentModal';
+import { getPayments, createPayment, PaymentFormData } from '../../actions/payments';
+import { getStudents } from '../../actions/students';
 
 export interface PaymentItem {
   id: string;
+  studentId: string;
   studentName: string;
   concept: string;
   amount: number;
@@ -17,41 +20,35 @@ export interface PaymentItem {
   status: 'COMPLETED' | 'PENDING' | 'CANCELLED';
 }
 
-const INITIAL_PAYMENTS: PaymentItem[] = [
-  {
-    id: 'p1',
-    studentName: 'Ana Martínez',
-    concept: 'Colegiatura Mensual - Mambo On2',
-    amount: 800,
-    date: '2026-08-28',
-    paymentMethod: 'TRANSFER',
-    status: 'COMPLETED',
-  },
-  {
-    id: 'p2',
-    studentName: 'Sofia López',
-    concept: 'Inscripción + Colegiatura Salsa',
-    amount: 1200,
-    date: '2026-08-25',
-    paymentMethod: 'CASH',
-    status: 'COMPLETED',
-  },
-  {
-    id: 'p3',
-    studentName: 'Carlos Ruiz',
-    concept: 'Colegiatura Mensual - Mambo On2',
-    amount: 800,
-    date: '2026-09-01',
-    paymentMethod: 'TRANSFER',
-    status: 'PENDING',
-  },
-];
-
 export function PaymentsContent() {
-  const [payments, setPayments] = useState<PaymentItem[]>(INITIAL_PAYMENTS);
+  const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [students, setStudents] = useState<StudentOption[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [paymentsData, studentsData] = await Promise.all([
+        getPayments(),
+        getStudents(),
+      ]);
+      setPayments(paymentsData);
+      setStudents(studentsData.map((s) => ({ id: s.id, fullName: s.fullName })));
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    loadData();
+  }, []);
 
   const filteredPayments = payments.filter((p) => {
     const matchesSearch =
@@ -61,13 +58,20 @@ export function PaymentsContent() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleSavePayment = (data: Omit<PaymentItem, 'id'>) => {
-    const newPayment: PaymentItem = {
-      id: `p_${Date.now()}`,
-      ...data,
-    };
-    setPayments((prev) => [newPayment, ...prev]);
+  const handleSavePayment = async (data: PaymentFormData) => {
+    await createPayment(data);
+    await loadData();
+    setIsModalOpen(false);
   };
+
+  if (!mounted) {
+    return (
+      <main className="flex-1 overflow-y-auto p-8 flex flex-col items-center justify-center min-h-screen text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
+        <p className="text-sm">Cargando módulo...</p>
+      </main>
+    );
+  }
 
   const totalMonthIncome = payments
     .filter((p) => p.status === 'COMPLETED')
@@ -136,14 +140,22 @@ export function PaymentsContent() {
         </div>
       </div>
 
-      {/* Tabla de Historial */}
-      <PaymentTable payments={filteredPayments} />
+      {/* Cargando o Tabla de Historial */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
+          <p className="text-sm">Cargando historial financiero...</p>
+        </div>
+      ) : (
+        <PaymentTable payments={filteredPayments} />
+      )}
 
       {/* Modal */}
       <PaymentModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSavePayment}
+        students={students}
       />
     </main>
   );

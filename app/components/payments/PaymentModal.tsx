@@ -1,9 +1,8 @@
 // components/payments/PaymentModal.tsx
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, UserCheck } from 'lucide-react';
-import { PaymentItem } from './PaymentsContent';
+import { PaymentFormData } from '../../actions/payments';
 
-// Definimos un tipo ligero para la lista de alumnos disponibles
 export interface StudentOption {
   id: string;
   fullName: string;
@@ -12,24 +11,15 @@ export interface StudentOption {
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Omit<PaymentItem, 'id'>) => void;
-  // Pasamos la lista de alumnos desde el estado o base de datos
-  students?: StudentOption[];
+  onSave: (data: PaymentFormData) => void;
+  students: StudentOption[];
 }
-
-// Datos de ejemplo en caso de no pasar la lista explícitamente
-const DEFAULT_STUDENTS: StudentOption[] = [
-  { id: '1', fullName: 'Ana Martínez' },
-  { id: '2', fullName: 'Carlos Ruiz' },
-  { id: '3', fullName: 'Sofia López' },
-  { id: '4', fullName: 'Luis Fernando Delgado' },
-];
 
 export function PaymentModal({ 
   isOpen, 
   onClose, 
   onSave, 
-  students = DEFAULT_STUDENTS 
+  students 
 }: PaymentModalProps) {
   const [selectedStudent, setSelectedStudent] = useState<StudentOption | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
@@ -38,15 +28,21 @@ export function PaymentModal({
   const [concept, setConcept] = useState('Colegiatura Mensual');
   const [amount, setAmount] = useState<number | ''>(800);
   const [date, setDate] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentItem['paymentMethod']>('TRANSFER');
-  const [status, setStatus] = useState<PaymentItem['status']>('COMPLETED');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentFormData['paymentMethod']>('TRANSFER');
+  const [status, setStatus] = useState<PaymentFormData['status']>('COMPLETED');
 
-useEffect(() => {
-  // Se asigna la fecha solo cuando el componente ya está en el cliente
-  setDate(new Date().toISOString().split('T')[0]);
-}, [isOpen]);
+  useEffect(() => {
+    if (isOpen) {
+      setDate(new Date().toISOString().split('T')[0]);
+      setSelectedStudent(null);
+      setStudentSearch('');
+      setConcept('Colegiatura Mensual');
+      setAmount(800);
+      setPaymentMethod('TRANSFER');
+      setStatus('COMPLETED');
+    }
+  }, [isOpen]);
 
-  // Filtrar alumnos según la búsqueda
   const filteredStudents = useMemo(() => {
     return students.filter((s) =>
       s.fullName.toLowerCase().includes(studentSearch.toLowerCase())
@@ -57,26 +53,19 @@ useEffect(() => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStudent || !amount) return;
+    if (!selectedStudent || !amount || !date) return;
 
     onSave({
-      studentName: selectedStudent.fullName,
+      studentId: selectedStudent.id,
       concept,
       amount: Number(amount),
-      date,
+      date: new Date(date),
       paymentMethod,
       status,
     });
 
-    // Resetear formulario
-    setSelectedStudent(null);
-    setStudentSearch('');
-    setConcept('Colegiatura Mensual');
-    setAmount(800);
     onClose();
   };
-
-  
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -84,7 +73,7 @@ useEffect(() => {
         <h3 className="text-lg font-bold text-slate-900 mb-4">Registrar Nuevo Pago</h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* Campo Alumno con Dropdown de Búsqueda */}
+          {/* Selector con Búsqueda de Alumno */}
           <div className="relative">
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Seleccionar Alumno <span className="text-red-500">*</span>
@@ -125,7 +114,7 @@ useEffect(() => {
                   className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500"
                 />
 
-                {/* Desplegable de sugerencias */}
+                {/* Desplegable */}
                 {isDropdownOpen && (
                   <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-10 divide-y divide-slate-100">
                     {filteredStudents.length > 0 ? (
@@ -195,7 +184,7 @@ useEffect(() => {
               <label className="block text-xs font-semibold text-slate-700 mb-1">Método de Pago</label>
               <select
                 value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value as PaymentItem['paymentMethod'])}
+                onChange={(e) => setPaymentMethod(e.target.value as PaymentFormData['paymentMethod'])}
                 className="w-full px-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 bg-white"
               >
                 <option value="TRANSFER">Transferencia / SPEI</option>
@@ -207,7 +196,7 @@ useEffect(() => {
               <label className="block text-xs font-semibold text-slate-700 mb-1">Estatus</label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as PaymentItem['status'])}
+                onChange={(e) => setStatus(e.target.value as PaymentFormData['status'])}
                 className="w-full px-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 bg-white"
               >
                 <option value="COMPLETED">Completado</option>
