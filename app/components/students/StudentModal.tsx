@@ -1,25 +1,38 @@
 // components/students/StudentModal.tsx
 import React, { useState, useEffect } from 'react';
 import { StudentItem } from './StudentsContent';
+import { StudentFormData } from '../../actions/students';
+
+export interface ScheduleOption {
+  id: string;
+  label: string;
+}
 
 interface StudentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: Omit<StudentItem, 'id'>) => void;
+  onSave: (data: StudentFormData) => void;
   initialData?: StudentItem | null;
+  availableSchedules: ScheduleOption[];
 }
 
-export function StudentModal({ isOpen, onClose, onSave, initialData }: StudentModalProps) {
-  const [formData, setFormData] = useState({
+export function StudentModal({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  initialData, 
+  availableSchedules 
+}: StudentModalProps) {
+  const [formData, setFormData] = useState<StudentFormData>({
     fullName: '',
     phone: '',
     email: '',
-    danceRole: 'FOLLOWER' as StudentItem['danceRole'],
+    danceRole: 'FOLLOWER',
     level: 'Principiante',
-    assignedClass: 'Mambo On2 - Estudio Central',
-    paymentStatus: 'PAID' as StudentItem['paymentStatus'],
+    scheduleId: availableSchedules[0]?.id || '',
+    paymentStatus: 'PAID',
     paymentDueDate: 5,
-    status: 'ACTIVE' as StudentItem['status'],
+    status: 'ACTIVE',
   });
 
   useEffect(() => {
@@ -30,7 +43,7 @@ export function StudentModal({ isOpen, onClose, onSave, initialData }: StudentMo
         email: initialData.email || '',
         danceRole: initialData.danceRole,
         level: initialData.level,
-        assignedClass: initialData.assignedClass,
+        scheduleId: initialData.scheduleId || '',
         paymentStatus: initialData.paymentStatus,
         paymentDueDate: initialData.paymentDueDate,
         status: initialData.status,
@@ -42,13 +55,13 @@ export function StudentModal({ isOpen, onClose, onSave, initialData }: StudentMo
         email: '',
         danceRole: 'FOLLOWER',
         level: 'Principiante',
-        assignedClass: 'Mambo On2 - Estudio Central',
+        scheduleId: availableSchedules[0]?.id || '',
         paymentStatus: 'PAID',
         paymentDueDate: 5,
         status: 'ACTIVE',
       });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, availableSchedules]);
 
   if (!isOpen) return null;
 
@@ -105,7 +118,7 @@ export function StudentModal({ isOpen, onClose, onSave, initialData }: StudentMo
               <label className="block text-xs font-semibold text-slate-700 mb-1">Rol de Baile</label>
               <select
                 value={formData.danceRole}
-                onChange={(e) => setFormData({ ...formData, danceRole: e.target.value as StudentItem['danceRole'] })}
+                onChange={(e) => setFormData({ ...formData, danceRole: e.target.value as StudentFormData['danceRole'] })}
                 className="w-full px-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 bg-white"
               >
                 <option value="LEADER">Leader (Guía)</option>
@@ -128,14 +141,17 @@ export function StudentModal({ isOpen, onClose, onSave, initialData }: StudentMo
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Clase / Sede Asignada</label>
-            <input
-              type="text"
-              placeholder="ej. Mambo On2 - Estudio Central"
-              value={formData.assignedClass}
-              onChange={(e) => setFormData({ ...formData, assignedClass: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500"
-            />
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Clase Asignada</label>
+            <select
+              value={formData.scheduleId || ''}
+              onChange={(e) => setFormData({ ...formData, scheduleId: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 bg-white"
+            >
+              <option value="">Sin clase asignada</option>
+              {availableSchedules.map((sch) => (
+                <option key={sch.id} value={sch.id}>{sch.label}</option>
+              ))}
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -143,7 +159,7 @@ export function StudentModal({ isOpen, onClose, onSave, initialData }: StudentMo
               <label className="block text-xs font-semibold text-slate-700 mb-1">Estatus del Pago</label>
               <select
                 value={formData.paymentStatus}
-                onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value as StudentItem['paymentStatus'] })}
+                onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value as StudentFormData['paymentStatus'] })}
                 className="w-full px-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-indigo-500 bg-white"
               >
                 <option value="PAID">Al día (Pagado)</option>

@@ -1,12 +1,20 @@
 // components/students/StudentsContent.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Search, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Users, Loader2 } from 'lucide-react';
 import { StudentMetrics } from './StudentMetrics';
 import { StudentTable } from './StudentTable';
-import { StudentModal } from './StudentModal';
+import { StudentModal, ScheduleOption } from './StudentModal';
 import { DeleteStudentModal } from './DeleteStudentModal';
+import { 
+  getStudents, 
+  createStudent, 
+  updateStudent, 
+  deleteStudent,
+  StudentFormData 
+} from '../../actions/students';
+import { getSchedules } from '../../actions/schedules';
 
 export interface StudentItem {
   id: string;
@@ -15,57 +23,50 @@ export interface StudentItem {
   email?: string;
   danceRole: 'LEADER' | 'FOLLOWER' | 'BOTH';
   level: string;
+  scheduleId?: string;
   assignedClass: string;
   paymentStatus: 'PAID' | 'PENDING' | 'DUE_SOON';
-  paymentDueDate: number; // Día del mes
+  paymentDueDate: number;
   status: 'ACTIVE' | 'INACTIVE';
 }
 
-const INITIAL_STUDENTS: StudentItem[] = [
-  {
-    id: '1',
-    fullName: 'Ana Martínez',
-    phone: '+52 312 111 2233',
-    email: 'ana@example.com',
-    danceRole: 'FOLLOWER',
-    level: 'Intermedio',
-    assignedClass: 'Mambo On2 - Estudio Central',
-    paymentStatus: 'PAID',
-    paymentDueDate: 5,
-    status: 'ACTIVE',
-  },
-  {
-    id: '2',
-    fullName: 'Carlos Ruiz',
-    phone: '+52 312 444 5566',
-    danceRole: 'LEADER',
-    level: 'Intermedio',
-    assignedClass: 'Mambo On2 - Estudio Central',
-    paymentStatus: 'PENDING',
-    paymentDueDate: 1,
-    status: 'ACTIVE',
-  },
-  {
-    id: '3',
-    fullName: 'Sofia López',
-    phone: '+52 312 777 8899',
-    danceRole: 'FOLLOWER',
-    level: 'Principiante',
-    assignedClass: 'Salsa Timba - Ritmo Norte',
-    paymentStatus: 'DUE_SOON',
-    paymentDueDate: 10,
-    status: 'ACTIVE',
-  },
-];
-
 export function StudentsContent() {
-  const [students, setStudents] = useState<StudentItem[]>(INITIAL_STUDENTS);
+  const [students, setStudents] = useState<StudentItem[]>([]);
+  const [schedules, setSchedules] = useState<ScheduleOption[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentItem | null>(null);
   const [deletingStudent, setDeletingStudent] = useState<StudentItem | null>(null);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [studentsData, schedulesData] = await Promise.all([
+        getStudents(),
+        getSchedules(),
+      ]);
+      setStudents(studentsData);
+      setSchedules(
+        schedulesData.map((s) => ({
+          id: s.id,
+          label: `${s.className} (${s.locationName})`,
+        }))
+      );
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    loadData();
+  }, []);
 
   const filteredStudents = students.filter((st) => {
     const matchesSearch =
@@ -85,27 +86,32 @@ export function StudentsContent() {
     setIsModalOpen(true);
   };
 
-  const handleSave = (data: Omit<StudentItem, 'id'>) => {
+  const handleSave = async (data: StudentFormData) => {
     if (editingStudent) {
-      setStudents((prev) =>
-        prev.map((item) => (item.id === editingStudent.id ? { ...item, ...data } : item))
-      );
+      await updateStudent(editingStudent.id, data);
     } else {
-      const newStudent: StudentItem = {
-        id: Date.now().toString(),
-        ...data,
-      };
-      setStudents((prev) => [...prev, newStudent]);
+      await createStudent(data);
     }
+    await loadData();
     setIsModalOpen(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deletingStudent) {
-      setStudents((prev) => prev.filter((st) => st.id !== deletingStudent.id));
+      await deleteStudent(deletingStudent.id);
+      await loadData();
       setDeletingStudent(null);
     }
   };
+
+  if (!mounted) {
+    return (
+      <main className="flex-1 overflow-y-auto p-8 flex flex-col items-center justify-center min-h-screen text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
+        <p className="text-sm">Cargando módulo...</p>
+      </main>
+    );
+  }
 
   const total = students.length;
   const active = students.filter((s) => s.status === 'ACTIVE').length;
@@ -165,12 +171,19 @@ export function StudentsContent() {
         </div>
       </div>
 
-      {/* Tabla Principal */}
-      <StudentTable
-        students={filteredStudents}
-        onEdit={handleOpenEdit}
-        onDelete={(st) => setDeletingStudent(st)}
-      />
+      {/* Cargando o Tabla Principal */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <Loader2 className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
+          <p className="text-sm">Cargando alumnos desde Supabase...</p>
+        </div>
+      ) : (
+        <StudentTable
+          students={filteredStudents}
+          onEdit={handleOpenEdit}
+          onDelete={(st) => setDeletingStudent(st)}
+        />
+      )}
 
       {/* Modales */}
       <StudentModal
@@ -178,6 +191,7 @@ export function StudentsContent() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSave}
         initialData={editingStudent}
+        availableSchedules={schedules}
       />
 
       <DeleteStudentModal
