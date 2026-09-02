@@ -22,6 +22,7 @@ export interface PaymentItem {
 
 export function PaymentsContent() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [students, setStudents] = useState<StudentOption[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -36,7 +37,8 @@ export function PaymentsContent() {
         getPayments(),
         getStudents(),
       ]);
-      setPayments(paymentsData);
+      setPayments(paymentsData.payments);
+      setMonthlyIncome(paymentsData.monthlyIncome);
       setStudents(studentsData.map((s) => ({ id: s.id, fullName: s.fullName })));
     } catch (error) {
       console.error(error);
@@ -73,12 +75,8 @@ export function PaymentsContent() {
     );
   }
 
-  const totalMonthIncome = payments
-    .filter((p) => p.status === 'COMPLETED')
-    .reduce((sum, p) => sum + p.amount, 0);
-
+  // Conteos complementarios
   const completedPaymentsCount = payments.filter((p) => p.status === 'COMPLETED').length;
-
   const pendingAmount = payments
     .filter((p) => p.status === 'PENDING')
     .reduce((sum, p) => sum + p.amount, 0);
@@ -106,9 +104,9 @@ export function PaymentsContent() {
         </button>
       </div>
 
-      {/* Métricas Financieras */}
+      {/* Métricas Financieras (monthlyIncome filtrado solo del mes actual) */}
       <PaymentMetrics
-        totalMonthIncome={totalMonthIncome}
+        totalMonthIncome={monthlyIncome}
         completedPaymentsCount={completedPaymentsCount}
         pendingAmount={pendingAmount}
       />

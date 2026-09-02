@@ -14,40 +14,68 @@ export interface PaymentFormData {
   status: TransactionStatus;
 }
 
-// 1. Obtener todos los pagos registrados con la información de su alumno
+// Obtener los pagos e ingresos calculados del mes en curso
 export async function getPayments() {
   try {
-    const payments = await prisma.payment.findMany({
-      include: {
-        student: {
-          select: {
-            id: true,
-            fullName: true,
+    const now = new Date();
+
+    // Rango UTC para el mes actual
+    const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0));
+    const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999));
+
+    const [payments, monthlyCompletedPayments] = await Promise.all([
+      // 1. Obtener todo el historial de pagos para la tabla
+      prisma.payment.findMany({
+        include: {
+          student: {
+            select: {
+              id: true,
+              fullName: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      // 2. Obtener únicamente los pagos COMPLETADOS dentro del mes actual
+      prisma.payment.findMany({
+        where: {
+          status: 'COMPLETED',
+          date: {
+            gte: startOfMonth,
+            lte: endOfMonth,
+          },
+        },
+        select: {
+          amount: true,
+        },
+      }),
+    ]);
 
-    return payments.map((p) => ({
-      id: p.id,
-      studentId: p.studentId,
-      studentName: p.student?.fullName || 'Alumno no encontrado',
-      concept: p.concept,
-      amount: p.amount,
-      date: new Date(p.date).toISOString().split('T')[0],
-      paymentMethod: p.paymentMethod,
-      status: p.status,
-    }));
+    // Sumar ingresos solo del mes en curso
+    const monthlyIncome = monthlyCompletedPayments.reduce((sum, p) => sum + p.amount, 0);
+
+    return {
+      payments: payments.map((p) => ({
+        id: p.id,
+        studentId: p.studentId,
+        studentName: p.student?.fullName || 'Alumno no encontrado',
+        concept: p.concept,
+        amount: p.amount,
+        date: new Date(p.date).toISOString().split('T')[0],
+        paymentMethod: p.paymentMethod,
+        status: p.status,
+      })),
+      monthlyIncome,
+    };
   } catch (error) {
     console.error('Error al obtener pagos:', error);
     throw new Error('No se pudieron cargar los pagos.');
   }
 }
 
-// 2. Registrar un nuevo pago
+// Registrar un nuevo pago
 export async function createPayment(data: PaymentFormData) {
   try {
     const newPayment = await prisma.payment.create({
@@ -61,7 +89,6 @@ export async function createPayment(data: PaymentFormData) {
       },
     });
 
-    // Si el pago es completado, podemos actualizar opcionalmente el estado del alumno a PAID
     if (data.status === 'COMPLETED') {
       await prisma.student.update({
         where: { id: data.studentId },
@@ -71,6 +98,7 @@ export async function createPayment(data: PaymentFormData) {
 
     revalidatePath('/dashboard/payments');
     revalidatePath('/dashboard/students');
+    revalidatePath('/dashboard');
     return { success: true, data: newPayment };
   } catch (error) {
     console.error('Error al registrar pago:', error);
