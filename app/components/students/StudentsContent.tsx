@@ -172,25 +172,15 @@ export function StudentsContent() {
   return (
     <main className="flex-1 overflow-y-auto p-8">
       {/* Encabezado */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExportStudents}
-            disabled={filteredStudents.length === 0}
-            className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-lg border border-slate-200 shadow-sm transition-colors text-sm disabled:opacity-50"
-          >
-            <Download className="h-4 w-4 text-slate-500" />
-            Exportar Alumnos
-          </button>
-
-          <button
-            onClick={handleOpenCreate}
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors text-sm"
-          >
-            <Plus className="h-4 w-4" />
-            Nuevo Alumno
-          </button>
-        </div>
+      <div className="flex flex-col md:flex-row md:items-center  gap-4 mb-8">
+        <button
+          onClick={handleExportStudents}
+          disabled={filteredStudents.length === 0}
+          className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-lg border border-slate-200 shadow-sm transition-colors text-sm disabled:opacity-50"
+        >
+          <Download className="h-4 w-4 text-slate-500" />
+          Exportar Alumnos
+        </button>
 
         <button
           onClick={handleOpenCreate}
