@@ -1,85 +1,71 @@
 // components/payments/PaymentTable.tsx
 import React from 'react';
-import { CreditCard, Banknote, ArrowUpRight } from 'lucide-react';
 import { PaymentItem } from './PaymentsContent';
+import { DownloadReceiptButton } from './DownloadReceiptButton';
 
 interface PaymentTableProps {
   payments: PaymentItem[];
 }
 
 export function PaymentTable({ payments }: PaymentTableProps) {
-  const getStatusBadge = (status: PaymentItem['status']) => {
-    switch (status) {
-      case 'COMPLETED':
-        return <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-semibold">Completado</span>;
-      case 'PENDING':
-        return <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-semibold">Pendiente</span>;
-      case 'CANCELLED':
-        return <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full font-semibold">Cancelado</span>;
-    }
-  };
-
-  const getMethodBadge = (method: PaymentItem['paymentMethod']) => {
-    switch (method) {
-      case 'CASH':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-700 font-medium">
-            <Banknote className="h-3.5 w-3.5 text-emerald-600" /> Efectivo
-          </span>
-        );
-      case 'TRANSFER':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-700 font-medium">
-            <ArrowUpRight className="h-3.5 w-3.5 text-blue-600" /> Transferencia
-          </span>
-        );
-      case 'CARD':
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-700 font-medium">
-            <CreditCard className="h-3.5 w-3.5 text-purple-600" /> Tarjeta
-          </span>
-        );
-    }
-  };
-
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500 tracking-wider">
-              <th className="py-3.5 px-4">Alumno</th>
-              <th className="py-3.5 px-4">Concepto</th>
-              <th className="py-3.5 px-4">Monto</th>
-              <th className="py-3.5 px-4">Fecha</th>
-              <th className="py-3.5 px-4">Método</th>
-              <th className="py-3.5 px-4 text-right">Estatus</th>
+            <tr className="bg-slate-50 text-slate-500 uppercase border-b border-slate-200 font-semibold">
+              <th className="py-3 px-4">Alumno</th>
+              <th className="py-3 px-4">Concepto</th>
+              <th className="py-3 px-4">Monto</th>
+              <th className="py-3 px-4">Método</th>
+              <th className="py-3 px-4">Fecha</th>
+              <th className="py-3 px-4">Estatus</th>
+              <th className="py-3 px-4 text-center">Recibo</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200 text-sm text-slate-700">
+          <tbody className="divide-y divide-slate-100 text-slate-700">
             {payments.length > 0 ? (
-              payments.map((payment) => (
-                <tr key={payment.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-4">
-                    <div className="font-semibold text-slate-900">{payment.studentName}</div>
+              payments.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-3 px-4 font-bold text-slate-900">{p.studentName}</td>
+                  <td className="py-3 px-4 font-medium">{p.concept}</td>
+                  <td className="py-3 px-4 font-extrabold text-slate-900">
+                    ${p.amount.toLocaleString('es-MX')} MXN
                   </td>
-                  <td className="py-3.5 px-4">
-                    <span className="text-xs font-medium text-slate-700">{payment.concept}</span>
+                  <td className="py-3 px-4">
+                    {p.paymentMethod === 'TRANSFER'
+                      ? 'SPEI / Transf.'
+                      : p.paymentMethod === 'CASH'
+                      ? 'Efectivo'
+                      : 'Tarjeta'}
                   </td>
-                  <td className="py-3.5 px-4">
-                    <span className="font-bold text-slate-900">
-                      ${payment.amount.toLocaleString('es-MX')} MXN
+                  <td className="py-3 px-4 text-slate-500">{p.date}</td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        p.status === 'COMPLETED'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {p.status === 'COMPLETED' ? 'Completado' : 'Pendiente'}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 text-xs text-slate-500">{payment.date}</td>
-                  <td className="py-3.5 px-4">{getMethodBadge(payment.paymentMethod)}</td>
-                  <td className="py-3.5 px-4 text-right">{getStatusBadge(payment.status)}</td>
+                  <td className="py-3 px-4 text-center">
+                    {p.status === 'COMPLETED' ? (
+                      <div className="flex justify-center">
+                        <DownloadReceiptButton payment={p} />
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic">N/A</span>
+                    )}
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-slate-400 text-sm">
-                  No se encontraron pagos registrados.
+                <td colSpan={7} className="py-8 text-center text-slate-400">
+                  No hay pagos registrados para este periodo.
                 </td>
               </tr>
             )}
