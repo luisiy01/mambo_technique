@@ -20,7 +20,7 @@ export function Sidebar({ currentRoute = "/dashboard" }: SidebarProps) {
     { label: "Alumnos", href: "/dashboard/students", icon: Users },
     { label: "Horarios", href: "/dashboard/schedules", icon: Calendar },
     { label: "Pagos", href: "/dashboard/payments", icon: CreditCard },
-    { name: "Asistencia", href: "/dashboard/attendance", icon: UserCheck },
+    { label: "Asistencia", href: "/dashboard/attendance", icon: UserCheck },
   ];
 
   return (
