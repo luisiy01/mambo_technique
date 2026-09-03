@@ -1,13 +1,25 @@
 // components/payments/PaymentsContent.tsx
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, CreditCard, Loader2, Calendar } from 'lucide-react';
-import { PaymentMetrics } from './PaymentMetrics';
-import { PaymentTable } from './PaymentTable';
-import { PaymentModal, StudentOption } from './PaymentModal';
-import { getPayments, createPayment, PaymentFormData } from '../../actions/payments';
-import { getStudents } from '../../actions/students';
+import React, { useState, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  CreditCard,
+  Loader2,
+  Calendar,
+  Download,
+} from "lucide-react";
+import { exportToCsv } from "../../lib/exportCsv";
+import { PaymentMetrics } from "./PaymentMetrics";
+import { PaymentTable } from "./PaymentTable";
+import { PaymentModal, StudentOption } from "./PaymentModal";
+import {
+  getPayments,
+  createPayment,
+  PaymentFormData,
+} from "../../actions/payments";
+import { getStudents } from "../../actions/students";
 
 export interface PaymentItem {
   id: string;
@@ -16,38 +28,42 @@ export interface PaymentItem {
   concept: string;
   amount: number;
   date: string;
-  paymentMethod: 'CASH' | 'TRANSFER' | 'CARD';
-  status: 'COMPLETED' | 'PENDING' | 'CANCELLED';
+  paymentMethod: "CASH" | "TRANSFER" | "CARD";
+  status: "COMPLETED" | "PENDING" | "CANCELLED";
 }
 
 const MONTHS = [
-  { value: 1, label: 'Enero' },
-  { value: 2, label: 'Febrero' },
-  { value: 3, label: 'Marzo' },
-  { value: 4, label: 'Abril' },
-  { value: 5, label: 'Mayo' },
-  { value: 6, label: 'Junio' },
-  { value: 7, label: 'Julio' },
-  { value: 8, label: 'Agosto' },
-  { value: 9, label: 'Septiembre' },
-  { value: 10, label: 'Octubre' },
-  { value: 11, label: 'Noviembre' },
-  { value: 12, label: 'Diciembre' },
+  { value: 1, label: "Enero" },
+  { value: 2, label: "Febrero" },
+  { value: 3, label: "Marzo" },
+  { value: 4, label: "Abril" },
+  { value: 5, label: "Mayo" },
+  { value: 6, label: "Junio" },
+  { value: 7, label: "Julio" },
+  { value: 8, label: "Agosto" },
+  { value: 9, label: "Septiembre" },
+  { value: 10, label: "Octubre" },
+  { value: 11, label: "Noviembre" },
+  { value: 12, label: "Diciembre" },
 ];
 
 export function PaymentsContent() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [students, setStudents] = useState<StudentOption[]>([]);
-  
+
   // Filtros
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
   // Estado para Mes y Año seleccionados (Inicializa con la fecha actual)
   const currentDate = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<number>(currentDate.getUTCMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState<number>(currentDate.getUTCFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    currentDate.getUTCMonth() + 1,
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(
+    currentDate.getUTCFullYear(),
+  );
 
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -66,7 +82,9 @@ export function PaymentsContent() {
 
       setPayments(paymentsData.payments);
       setMonthlyIncome(paymentsData.monthlyIncome);
-      setStudents(studentsData.map((s) => ({ id: s.id, fullName: s.fullName })));
+      setStudents(
+        studentsData.map((s) => ({ id: s.id, fullName: s.fullName })),
+      );
     } catch (error) {
       console.error(error);
     } finally {
@@ -94,11 +112,11 @@ export function PaymentsContent() {
     const matchesSearch =
       p.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.concept.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
-    
+    const matchesStatus = statusFilter === "ALL" || p.status === statusFilter;
+
     // Filtrar en la tabla los pagos que coincidan con el mes y año elegidos
     const paymentDate = new Date(p.date);
-    const matchesMonth = (paymentDate.getUTCMonth() + 1) === selectedMonth;
+    const matchesMonth = paymentDate.getUTCMonth() + 1 === selectedMonth;
     const matchesYear = paymentDate.getUTCFullYear() === selectedYear;
 
     return matchesSearch && matchesStatus && matchesMonth && matchesYear;
@@ -119,17 +137,58 @@ export function PaymentsContent() {
     );
   }
 
-  const completedPaymentsCount = filteredPayments.filter((p) => p.status === 'COMPLETED').length;
+  const completedPaymentsCount = filteredPayments.filter(
+    (p) => p.status === "COMPLETED",
+  ).length;
   const pendingAmount = filteredPayments
-    .filter((p) => p.status === 'PENDING')
+    .filter((p) => p.status === "PENDING")
     .reduce((sum, p) => sum + p.amount, 0);
 
   // Lista de últimos 3 años disponibles
   const currentYearNum = new Date().getFullYear();
-  const availableYears = [currentYearNum - 1, currentYearNum, currentYearNum + 1];
+  const availableYears = [
+    currentYearNum - 1,
+    currentYearNum,
+    currentYearNum + 1,
+  ];
+
+  const handleExportFinancialReport = () => {
+    if (filteredPayments.length === 0) return;
+
+    const columns = [
+      { header: "ID Transacción", accessor: (p: PaymentItem) => p.id },
+      { header: "Alumno", accessor: (p: PaymentItem) => p.studentName },
+      { header: "Concepto", accessor: (p: PaymentItem) => p.concept },
+      { header: "Monto (MXN)", accessor: (p: PaymentItem) => p.amount },
+      { header: "Fecha", accessor: (p: PaymentItem) => p.date },
+      {
+        header: "Método de Pago",
+        accessor: (p: PaymentItem) =>
+          p.paymentMethod === "TRANSFER"
+            ? "SPEI / Transferencia"
+            : p.paymentMethod === "CASH"
+              ? "Efectivo"
+              : "Tarjeta",
+      },
+      {
+        header: "Estatus",
+        accessor: (p: PaymentItem) =>
+          p.status === "COMPLETED" ? "Completado" : "Pendiente",
+      },
+    ];
+
+    const monthName =
+      MONTHS.find((m) => m.value === selectedMonth)?.label || selectedMonth;
+    exportToCsv(
+      filteredPayments,
+      columns,
+      `Reporte_Financiero_${monthName}_${selectedYear}`,
+    );
+  };
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
+      {/* Encabezado */}
       {/* Encabezado */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
@@ -138,17 +197,29 @@ export function PaymentsContent() {
             Control de Pagos y Finanzas
           </h2>
           <p className="text-slate-500 text-sm">
-            Registro de colegiaturas, comprobantes de pago e historial financiero.
+            Registro de colegiaturas, comprobantes de pago e historial
+            financiero.
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors text-sm"
-        >
-          <Plus className="h-4 w-4" />
-          Registrar Pago
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportFinancialReport}
+            disabled={filteredPayments.length === 0}
+            className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-lg border border-slate-200 shadow-sm transition-colors text-sm disabled:opacity-50"
+          >
+            <Download className="h-4 w-4 text-slate-500" />
+            Exportar Excel / CSV
+          </button>
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors text-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Registrar Pago
+          </button>
+        </div>
       </div>
 
       {/* Selector de Mes y Año */}
@@ -206,7 +277,9 @@ export function PaymentsContent() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs text-slate-500 font-medium shrink-0">Filtrar Estatus:</span>
+          <span className="text-xs text-slate-500 font-medium shrink-0">
+            Filtrar Estatus:
+          </span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}

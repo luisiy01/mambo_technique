@@ -1,46 +1,51 @@
 // components/students/StudentsContent.tsx
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Users, Loader2 } from 'lucide-react';
-import { StudentMetrics } from './StudentMetrics';
-import { StudentTable } from './StudentTable';
-import { StudentModal, ScheduleOption } from './StudentModal';
-import { DeleteStudentModal } from './DeleteStudentModal';
-import { 
-  getStudents, 
-  createStudent, 
-  updateStudent, 
+import React, { useState, useEffect } from "react";
+import { Plus, Search, Users, Loader2, Download } from "lucide-react";
+import { StudentMetrics } from "./StudentMetrics";
+import { StudentTable } from "./StudentTable";
+import { StudentModal, ScheduleOption } from "./StudentModal";
+import { DeleteStudentModal } from "./DeleteStudentModal";
+import {
+  getStudents,
+  createStudent,
+  updateStudent,
   deleteStudent,
-  StudentFormData 
-} from '../../actions/students';
-import { getSchedules } from '../../actions/schedules';
+  StudentFormData,
+} from "../../actions/students";
+import { getSchedules } from "../../actions/schedules";
+import { exportToCsv } from "../../lib/exportCsv";
 
 export interface StudentItem {
   id: string;
   fullName: string;
   phone: string;
   email?: string;
-  danceRole: 'LEADER' | 'FOLLOWER' | 'BOTH';
+  danceRole: "LEADER" | "FOLLOWER" | "BOTH";
   level: string;
   scheduleId?: string;
   assignedClass: string;
-  paymentStatus: 'PAID' | 'PENDING' | 'DUE_SOON';
+  paymentStatus: "PAID" | "PENDING" | "DUE_SOON";
   paymentDueDate: number;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
 }
 
 export function StudentsContent() {
   const [students, setStudents] = useState<StudentItem[]>([]);
   const [schedules, setSchedules] = useState<ScheduleOption[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<StudentItem | null>(null);
-  const [deletingStudent, setDeletingStudent] = useState<StudentItem | null>(null);
+  const [editingStudent, setEditingStudent] = useState<StudentItem | null>(
+    null,
+  );
+  const [deletingStudent, setDeletingStudent] = useState<StudentItem | null>(
+    null,
+  );
 
   const loadData = async () => {
     setIsLoading(true);
@@ -54,7 +59,7 @@ export function StudentsContent() {
         schedulesData.map((s) => ({
           id: s.id,
           label: `${s.className} (${s.locationName})`,
-        }))
+        })),
       );
     } catch (error) {
       console.error(error);
@@ -72,7 +77,7 @@ export function StudentsContent() {
     const matchesSearch =
       st.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       st.assignedClass.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'ALL' || st.danceRole === roleFilter;
+    const matchesRole = roleFilter === "ALL" || st.danceRole === roleFilter;
     return matchesSearch && matchesRole;
   });
 
@@ -114,21 +119,77 @@ export function StudentsContent() {
   }
 
   const total = students.length;
-  const active = students.filter((s) => s.status === 'ACTIVE').length;
-  const pendingPayment = students.filter((s) => s.paymentStatus === 'PENDING').length;
+  const active = students.filter((s) => s.status === "ACTIVE").length;
+  const pendingPayment = students.filter(
+    (s) => s.paymentStatus === "PENDING",
+  ).length;
+
+  const handleExportStudents = () => {
+    if (filteredStudents.length === 0) return;
+
+    const columns = [
+      { header: "ID Alumno", accessor: (s: StudentItem) => s.id },
+      { header: "Nombre Completo", accessor: (s: StudentItem) => s.fullName },
+      { header: "Teléfono", accessor: (s: StudentItem) => s.phone },
+      { header: "Correo", accessor: (s: StudentItem) => s.email || "N/A" },
+      {
+        header: "Rol de Baile",
+        accessor: (s: StudentItem) =>
+          s.danceRole === "LEADER"
+            ? "Leader"
+            : s.danceRole === "FOLLOWER"
+              ? "Follower"
+              : "Ambos",
+      },
+      { header: "Nivel", accessor: (s: StudentItem) => s.level },
+      {
+        header: "Taller Asignado",
+        accessor: (s: StudentItem) => s.assignedClass,
+      },
+      {
+        header: "Estatus Pago",
+        accessor: (s: StudentItem) =>
+          s.paymentStatus === "PAID"
+            ? "Al día"
+            : s.paymentStatus === "DUE_SOON"
+              ? "Por vencer"
+              : "Pendiente",
+      },
+      {
+        header: "Estatus Alumno",
+        accessor: (s: StudentItem) =>
+          s.status === "ACTIVE" ? "Activo" : "Inactivo",
+      },
+    ];
+
+    exportToCsv(
+      filteredStudents,
+      columns,
+      `Padron_Alumnos_${new Date().toISOString().split("T")[0]}`,
+    );
+  };
 
   return (
     <main className="flex-1 overflow-y-auto p-8">
       {/* Encabezado */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Users className="h-7 w-7 text-indigo-600" />
-            Gestión de Alumnos
-          </h2>
-          <p className="text-slate-500 text-sm">
-            Control de estudiantes, roles de baile, asignación de talleres y estatus de colegiaturas.
-          </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportStudents}
+            disabled={filteredStudents.length === 0}
+            className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2.5 rounded-lg border border-slate-200 shadow-sm transition-colors text-sm disabled:opacity-50"
+          >
+            <Download className="h-4 w-4 text-slate-500" />
+            Exportar Alumnos
+          </button>
+
+          <button
+            onClick={handleOpenCreate}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors text-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo Alumno
+          </button>
         </div>
 
         <button
@@ -141,7 +202,11 @@ export function StudentsContent() {
       </div>
 
       {/* Métricas Rápidas */}
-      <StudentMetrics total={total} active={active} pendingPayment={pendingPayment} />
+      <StudentMetrics
+        total={total}
+        active={active}
+        pendingPayment={pendingPayment}
+      />
 
       {/* Filtros y Buscador */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
@@ -157,7 +222,9 @@ export function StudentsContent() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs text-slate-500 font-medium shrink-0">Filtrar por Rol:</span>
+          <span className="text-xs text-slate-500 font-medium shrink-0">
+            Filtrar por Rol:
+          </span>
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
