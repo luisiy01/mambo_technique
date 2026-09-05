@@ -1,8 +1,9 @@
 // components/students/StudentTable.tsx
 import React, { useState } from 'react';
-import { Edit2, Trash2, MessageCircle } from 'lucide-react';
+import { Edit2, Trash2, MessageCircle, Eye } from 'lucide-react';
 import { StudentItem } from './StudentsContent';
 import { WhatsAppReminderModal } from './WhatsAppReminderModal';
+import { StudentDetailsModal } from './StudentDetailsModal';
 
 interface StudentTableProps {
   students: StudentItem[];
@@ -12,6 +13,7 @@ interface StudentTableProps {
 
 export function StudentTable({ students, onEdit, onDelete }: StudentTableProps) {
   const [selectedStudentForWhatsApp, setSelectedStudentForWhatsApp] = useState<StudentItem | null>(null);
+  const [selectedStudentIdForDetails, setSelectedStudentIdForDetails] = useState<string | null>(null);
 
   return (
     <>
@@ -63,7 +65,17 @@ export function StudentTable({ students, onEdit, onDelete }: StudentTableProps) 
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        {/* Botón rápido de WhatsApp */}
+                        {/* Botón Ver Expediente */}
+                        <button
+                          type="button"
+                          title="Ver Expediente de Alumno"
+                          onClick={() => setSelectedStudentIdForDetails(st.id)}
+                          className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+
+                        {/* Botón WhatsApp */}
                         <button
                           type="button"
                           title="Enviar Recordatorio por WhatsApp"
@@ -106,11 +118,17 @@ export function StudentTable({ students, onEdit, onDelete }: StudentTableProps) 
         </div>
       </div>
 
-      {/* Modal de WhatsApp */}
+      {/* Modales */}
       <WhatsAppReminderModal
         isOpen={Boolean(selectedStudentForWhatsApp)}
         onClose={() => setSelectedStudentForWhatsApp(null)}
         student={selectedStudentForWhatsApp}
+      />
+
+      <StudentDetailsModal
+        isOpen={Boolean(selectedStudentIdForDetails)}
+        onClose={() => setSelectedStudentIdForDetails(null)}
+        studentId={selectedStudentIdForDetails}
       />
     </>
   );
