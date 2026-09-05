@@ -1,7 +1,8 @@
 // components/students/WhatsAppReminderModal.tsx
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, ExternalLink, X, DollarSign } from 'lucide-react';
-import { generateWhatsAppReminderUrl, StudentWhatsAppInfo } from '../../lib/whatsapp';
+import { MessageCircle, ExternalLink, X, DollarSign, Loader2 } from 'lucide-react';
+import { generateWhatsAppReminderUrl, StudentWhatsAppInfo } from '@/lib/whatsapp';
+import { getAcademyConfig } from '../../actions/config';
 
 interface WhatsAppReminderModalProps {
   isOpen: boolean;
@@ -16,10 +17,19 @@ interface WhatsAppReminderModalProps {
 
 export function WhatsAppReminderModal({ isOpen, onClose, student }: WhatsAppReminderModalProps) {
   const [customAmount, setCustomAmount] = useState<number>(800);
+  const [config, setConfig] = useState<Awaited<ReturnType<typeof getAcademyConfig>> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
-      setCustomAmount(800); // Monto por defecto sugerido
+      setIsLoading(true);
+      getAcademyConfig()
+        .then((cfg) => {
+          setConfig(cfg);
+          setCustomAmount(cfg.defaultMonthlyFee || 800);
+        })
+        .catch((err) => console.error(err))
+        .finally(() => setIsLoading(false));
     }
   }, [isOpen]);
 
@@ -31,6 +41,10 @@ export function WhatsAppReminderModal({ isOpen, onClose, student }: WhatsAppRemi
     assignedClass: student.assignedClass,
     paymentDueDate: student.paymentDueDate,
     amountToPay: customAmount,
+    academyName: config?.academyName,
+    bankName: config?.bankName || undefined,
+    bankAccount: config?.bankAccount || undefined,
+    clabe: config?.clabe || undefined,
   };
 
   const whatsappUrl = generateWhatsAppReminderUrl(studentInfo);
@@ -60,49 +74,60 @@ export function WhatsAppReminderModal({ isOpen, onClose, student }: WhatsAppRemi
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Monto a Recordar (MXN)
-            </label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <input
-                type="number"
-                min={0}
-                value={customAmount}
-                onChange={(e) => setCustomAmount(Number(e.target.value))}
-                className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-emerald-500"
-              />
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+            <Loader2 className="h-6 w-6 animate-spin text-emerald-600 mb-2" />
+            <p className="text-xs">Cargando datos institucionales...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Monto a Recordar (MXN)
+              </label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="number"
+                  min={0}
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(Number(e.target.value))}
+                  className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm text-slate-800 focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Vista Previa del Mensaje
+              </label>
+              <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-lg p-3 text-xs text-slate-700 whitespace-pre-line font-sans leading-relaxed max-h-48 overflow-y-auto">
+                {`Hola ${student.fullName.split(' ')[0]} 👋✨ ¡Esperamos que estés teniendo un excelente día! \n\nTe escribimos de *${config?.academyName || 'la academia'}* para recordarte cordialmente sobre el pago de *$${customAmount} MXN* correspondiente a *${student.assignedClass || 'tu taller'}*, cuyo vencimiento es *el día ${student.paymentDueDate || 5} de este mes*.${
+                  config?.clabe
+                    ? `\n\n💳 *Datos para transferencia/SPEI:*\n• Banco: ${config.bankName || 'BBVA'}\n• CLABE: ${config.clabe}`
+                    : ''
+                }\n\nSi ya realizaste tu pago o transferencia, por favor reenvíanos tu comprobante por este medio. ¡Muchas gracias y nos vemos en clase! 💃🕺`}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleOpenWhatsApp}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" /> Enviar por WhatsApp
+              </button>
             </div>
           </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Vista Previa del Mensaje
-            </label>
-            <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-lg p-3 text-xs text-slate-700 whitespace-pre-line font-sans leading-relaxed">
-              {`Hola ${student.fullName.split(' ')[0]} 👋✨ ¡Esperamos que estés teniendo un excelente día! \n\nTe escribimos de la academia para recordarte cordialmente sobre el pago de *$${customAmount} MXN* correspondiente a *${student.assignedClass || 'tu taller'}*, cuyo vencimiento es *el día ${student.paymentDueDate || 5} de este mes*.\n\nSi ya realizaste tu pago o transferencia, por favor reenvíanos tu comprobante por este medio. ¡Muchas gracias y nos vemos en clase! 💃🕺`}
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenWhatsApp}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" /> Enviar por WhatsApp
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

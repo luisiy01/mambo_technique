@@ -4,8 +4,9 @@
 import React, { useState, useEffect } from 'react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { FileDown, Loader2 } from 'lucide-react';
-import { PaymentReceiptPDF } from './PaymentReceiptPDF';
+import { PaymentReceiptPDF, AcademyReceiptConfig } from './PaymentReceiptPDF';
 import { PaymentItem } from './PaymentsContent';
+import { getAcademyConfig } from '../../actions/config';
 
 interface DownloadReceiptButtonProps {
   payment: PaymentItem;
@@ -13,17 +14,25 @@ interface DownloadReceiptButtonProps {
 
 export function DownloadReceiptButton({ payment }: DownloadReceiptButtonProps) {
   const [isMounted, setIsMounted] = useState(false);
+  const [config, setConfig] = useState<AcademyReceiptConfig | undefined>(undefined);
 
   useEffect(() => {
     setIsMounted(true);
+    getAcademyConfig()
+      .then((cfg) => {
+        setConfig({
+          academyName: cfg.academyName,
+          address: cfg.address || '',
+          phone: cfg.phone || '',
+          email: cfg.email || '',
+        });
+      })
+      .catch((err) => console.error(err));
   }, []);
 
   if (!isMounted) {
     return (
-      <button
-        disabled
-        className="p-1.5 bg-slate-100 text-slate-400 rounded-lg"
-      >
+      <button disabled className="p-1.5 bg-slate-100 text-slate-400 rounded-lg">
         <Loader2 className="h-4 w-4 animate-spin" />
       </button>
     );
@@ -31,7 +40,7 @@ export function DownloadReceiptButton({ payment }: DownloadReceiptButtonProps) {
 
   return (
     <PDFDownloadLink
-      document={<PaymentReceiptPDF payment={payment} />}
+      document={<PaymentReceiptPDF payment={payment} config={config} />}
       fileName={`Recibo_${payment.studentName.replace(/\s+/g, '_')}_${payment.date}.pdf`}
     >
       {/* @ts-ignore */}

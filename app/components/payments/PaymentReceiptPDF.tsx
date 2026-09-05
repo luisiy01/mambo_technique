@@ -2,6 +2,13 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
+export interface AcademyReceiptConfig {
+  academyName: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+}
+
 interface PaymentReceiptProps {
   payment: {
     id: string;
@@ -11,6 +18,7 @@ interface PaymentReceiptProps {
     date: string;
     paymentMethod: string;
   };
+  config?: AcademyReceiptConfig;
 }
 
 const styles = StyleSheet.create({
@@ -28,10 +36,10 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#4f46e5',
   },
@@ -54,7 +62,7 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   label: {
     fontSize: 9,
@@ -68,7 +76,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   table: {
-    marginTop: 15,
+    marginTop: 10,
     marginBottom: 15,
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -110,11 +118,11 @@ const styles = StyleSheet.create({
     color: '#3730a3',
   },
   footer: {
-    marginTop: 40,
+    marginTop: 30,
     textAlign: 'center',
     borderTopWidth: 1,
     borderTopColor: '#f1f5f9',
-    paddingTop: 15,
+    paddingTop: 12,
   },
   footerText: {
     fontSize: 8,
@@ -122,7 +130,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export function PaymentReceiptPDF({ payment }: PaymentReceiptProps) {
+export function PaymentReceiptPDF({ payment, config }: PaymentReceiptProps) {
   const formattedMethod =
     payment.paymentMethod === 'TRANSFER'
       ? 'Transferencia / SPEI'
@@ -130,14 +138,22 @@ export function PaymentReceiptPDF({ payment }: PaymentReceiptProps) {
       ? 'Efectivo'
       : 'Tarjeta';
 
+  const academyName = config?.academyName || 'Academia de Baile';
+  const address = config?.address || '';
+  const contactInfo = [config?.phone, config?.email].filter(Boolean).join(' | ');
+
   return (
     <Document>
       <Page size="A5" orientation="landscape" style={styles.page}>
-        {/* Encabezado */}
+        {/* Encabezado Dinámico */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Academia de Baile</Text>
-            <Text style={styles.subtitle}>Comprobante Oficial de Pago</Text>
+            <Text style={styles.title}>{academyName}</Text>
+            {address ? <Text style={styles.subtitle}>{address}</Text> : null}
+            {contactInfo ? <Text style={styles.subtitle}>{contactInfo}</Text> : null}
+            <Text style={[styles.subtitle, { marginTop: 4, fontWeight: 'bold' }]}>
+              Comprobante Oficial de Pago
+            </Text>
           </View>
           <View style={styles.receiptBadge}>
             <Text style={styles.receiptNumber}>RECIBO #{payment.id.slice(0, 8).toUpperCase()}</Text>
@@ -180,7 +196,7 @@ export function PaymentReceiptPDF({ payment }: PaymentReceiptProps) {
         {/* Pie de Página */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            ¡Muchas gracias por tu pago! Este documento sirve como comprobante oficial de tu colegiatura.
+            ¡Muchas gracias por tu pago! Este documento sirve como comprobante oficial emitido por {academyName}.
           </Text>
         </View>
       </Page>
