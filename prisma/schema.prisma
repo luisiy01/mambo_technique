@@ -174,3 +174,21 @@ model Attendance {
   @@unique([studentId, scheduleId, date])
   @@index([scheduleId, date])
 }
+
+// Modelo para la Configuración e Información Oficial de la Academia
+model AcademyConfig {
+  id               String   @id @default("default-config")
+  academyName      String   @default("Academia de Baile")
+  phone            String   @default("3120000000")
+  email            String?  @default("contacto@academiadebaile.com")
+  address          String?  @default("Av. Principal #123, Col. Centro")
+  
+  // Datos Financieros para Cobro y Recibos
+  bankName         String?  @default("BBVA")
+  bankAccount      String?  @default("1234567890")
+  clabe            String?  @default("012180001234567890")
+  defaultMonthlyFee Float   @default(800.0)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

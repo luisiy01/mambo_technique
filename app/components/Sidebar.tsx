@@ -7,6 +7,7 @@ import {
   TrendingUp,
   Calendar,
   UserCheck,
+  Settings,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -21,6 +22,7 @@ export function Sidebar({ currentRoute = "/dashboard" }: SidebarProps) {
     { label: "Horarios", href: "/dashboard/schedules", icon: Calendar },
     { label: "Pagos", href: "/dashboard/payments", icon: CreditCard },
     { label: "Asistencia", href: "/dashboard/attendance", icon: UserCheck },
+    { label: "Configuración", href: "/dashboard/settings", icon: Settings },
   ];
 
   return (
@@ -58,7 +60,7 @@ export function Sidebar({ currentRoute = "/dashboard" }: SidebarProps) {
       </div>
 
       <div className="px-2 py-4 border-t border-slate-800 text-xs text-slate-400">
-        Panel de Control de Baile v1.1
+        Panel de Control de Baile v1.2
       </div>
     </aside>
   );
