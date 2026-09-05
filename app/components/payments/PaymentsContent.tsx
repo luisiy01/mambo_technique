@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { toast } from 'sonner';
 import {
   Plus,
   Search,
@@ -123,10 +124,19 @@ export function PaymentsContent() {
   });
 
   const handleSavePayment = async (data: PaymentFormData) => {
-    await createPayment(data);
+  const res = await createPayment(data);
+  if (res.success) {
+    toast.success('Pago registrado con éxito', {
+      description: `Se ha generado el recibo por $${data.amount} MXN.`,
+    });
     await loadData(selectedMonth, selectedYear);
     setIsModalOpen(false);
-  };
+  } else {
+    toast.error('Error al registrar el pago', {
+      description: res.error,
+    });
+  }
+};
 
   if (!mounted) {
     return (
@@ -184,6 +194,9 @@ export function PaymentsContent() {
       columns,
       `Reporte_Financiero_${monthName}_${selectedYear}`,
     );
+    toast.info('Reporte generado', {
+    description: 'La descarga del archivo CSV ha comenzado.',
+  });
   };
 
   return (

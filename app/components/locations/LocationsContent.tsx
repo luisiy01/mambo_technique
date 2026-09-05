@@ -1,18 +1,19 @@
 // components/locations/LocationsContent.tsx
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Building2, Loader2 } from 'lucide-react';
-import { LocationCard } from './LocationCard';
-import { LocationModal } from './LocationModal';
-import { DeleteLocationModal } from './DeleteLocationModal';
-import { 
-  getLocations, 
-  createLocation, 
-  updateLocation, 
+import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { Plus, Search, Building2, Loader2 } from "lucide-react";
+import { LocationCard } from "./LocationCard";
+import { LocationModal } from "./LocationModal";
+import { DeleteLocationModal } from "./DeleteLocationModal";
+import {
+  getLocations,
+  createLocation,
+  updateLocation,
   deleteLocation,
-  LocationFormData 
-} from '@/app/actions/locations';
+  LocationFormData,
+} from "@/app/actions/locations";
 
 export interface LocationItem {
   id: string;
@@ -20,7 +21,7 @@ export interface LocationItem {
   address: string;
   googleMapsUrl?: string;
   contactPhone?: string;
-  rentType: 'FIXED' | 'HOURLY' | 'PERCENTAGE' | 'FREE';
+  rentType: "FIXED" | "HOURLY" | "PERCENTAGE" | "FREE";
   rentCost: string;
   capacity: number;
   amenities: string[];
@@ -29,13 +30,17 @@ export interface LocationItem {
 
 export function LocationsContent() {
   const [locations, setLocations] = useState<LocationItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   // Modales y Edición
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<LocationItem | null>(null);
-  const [deletingLocation, setDeletingLocation] = useState<LocationItem | null>(null);
+  const [editingLocation, setEditingLocation] = useState<LocationItem | null>(
+    null,
+  );
+  const [deletingLocation, setDeletingLocation] = useState<LocationItem | null>(
+    null,
+  );
 
   // Cargar sedes desde Supabase al montar el componente
   const loadLocations = async () => {
@@ -54,9 +59,10 @@ export function LocationsContent() {
     loadLocations();
   }, []);
 
-  const filteredLocations = locations.filter(loc => 
-    loc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    loc.address.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredLocations = locations.filter(
+    (loc) =>
+      loc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      loc.address.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleOpenCreateModal = () => {
@@ -71,22 +77,28 @@ export function LocationsContent() {
 
   const handleSaveLocation = async (data: LocationFormData) => {
     if (editingLocation) {
-      await updateLocation(editingLocation.id, data);
+      const res = await updateLocation(editingLocation.id, data);
+      if (res.success) toast.success("Sede actualizada correctamente");
     } else {
-      await createLocation(data);
+      const res = await createLocation(data);
+      if (res.success) toast.success("Nueva sede registrada con éxito");
     }
-    await loadLocations();
+    await loadData();
     setIsModalOpen(false);
   };
 
   const handleConfirmDelete = async () => {
     if (deletingLocation) {
-      await deleteLocation(deletingLocation.id);
-      await loadLocations();
+      const res = await deleteLocation(deletingLocation.id);
+      if (res.success) {
+        toast.success("Sede eliminada");
+      } else {
+        toast.error("No se pudo eliminar la sede");
+      }
+      await loadData();
       setDeletingLocation(null);
     }
   };
-
   return (
     <main className="flex-1 overflow-y-auto p-8">
       {/* Encabezado */}
@@ -97,7 +109,8 @@ export function LocationsContent() {
             Lugares de Clases
           </h2>
           <p className="text-slate-500 text-sm">
-            Administra tus sedes, esquemas de renta, capacidad y talleres asignados.
+            Administra tus sedes, esquemas de renta, capacidad y talleres
+            asignados.
           </p>
         </div>
 
@@ -144,8 +157,12 @@ export function LocationsContent() {
       ) : (
         <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
           <Building2 className="h-10 w-10 text-slate-300 mx-auto mb-2" />
-          <h3 className="font-semibold text-slate-700">No hay sedes registradas</h3>
-          <p className="text-xs text-slate-400 mt-1">Haz clic en "Nueva Sede" para agregar tu primer lugar de clases.</p>
+          <h3 className="font-semibold text-slate-700">
+            No hay sedes registradas
+          </h3>
+          <p className="text-xs text-slate-400 mt-1">
+            Haz clic en "Nueva Sede" para agregar tu primer lugar de clases.
+          </p>
         </div>
       )}
 

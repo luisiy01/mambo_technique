@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Plus, Search, Users, Loader2, Download } from "lucide-react";
 import { StudentMetrics } from "./StudentMetrics";
 import { StudentTable } from "./StudentTable";
@@ -93,21 +94,24 @@ export function StudentsContent() {
 
   const handleSave = async (data: StudentFormData) => {
     if (editingStudent) {
-      await updateStudent(editingStudent.id, data);
+      const res = await updateStudent(editingStudent.id, data);
+      if (res.success) toast.success("Alumno actualizado");
     } else {
-      await createStudent(data);
+      const res = await createStudent(data);
+      if (res.success) toast.success("Alumno registrado con éxito");
     }
     await loadData();
     setIsModalOpen(false);
   };
 
   const handleConfirmDelete = async () => {
-    if (deletingStudent) {
-      await deleteStudent(deletingStudent.id);
-      await loadData();
-      setDeletingStudent(null);
-    }
-  };
+  if (deletingStudent) {
+    const res = await deleteStudent(deletingStudent.id);
+    if (res.success) toast.success('Alumno eliminado del sistema');
+    await loadData();
+    setDeletingStudent(null);
+  }
+};
 
   if (!mounted) {
     return (
